@@ -1,0 +1,100 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-05-30 12:55:49.493800",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "fcm_token_path",
+  "send_push_notification_with_system_notification",
+  "column_break_6icca",
+  "fcm_project_name",
+  "site",
+  "sanitize_html",
+  "section_break_bt3i7",
+  "android_custom_payload",
+  "ios_custom_payload"
+ ],
+ "fields": [
+  {
+   "description": "Full path ie./home/frappe/frappe-bench/sites/hrms/fcm_token.json",
+   "fieldname": "fcm_token_path",
+   "fieldtype": "Data",
+   "label": "FCM Token Path"
+  },
+  {
+   "fieldname": "fcm_project_name",
+   "fieldtype": "Data",
+   "label": "FCM Project Name"
+  },
+  {
+   "fieldname": "android_custom_payload",
+   "fieldtype": "Code",
+   "label": "Android Custom Payload"
+  },
+  {
+   "fieldname": "ios_custom_payload",
+   "fieldtype": "Code",
+   "label": "IOS Custom Payload"
+  },
+  {
+   "default": "0",
+   "fieldname": "send_push_notification_with_system_notification",
+   "fieldtype": "Check",
+   "label": "Send Push Notification with System Notification"
+  },
+  {
+   "default": "0",
+   "fieldname": "sanitize_html",
+   "fieldtype": "Check",
+   "label": "Sanitize HTML"
+  },
+  {
+   "fieldname": "column_break_6icca",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_bt3i7",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "description": "If no site name is given, the default site name will be used",
+   "fieldname": "site",
+   "fieldtype": "Data",
+   "label": "Site",
+   "mandatory_depends_on": "eval:doc.enabled ==1"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-08-18 19:45:39.071476",
+ "modified_by": "Administrator",
+ "module": "Notification",
+ "name": "FCM Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

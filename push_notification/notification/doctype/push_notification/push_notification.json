@@ -1,0 +1,128 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:title",
+ "creation": "2025-05-27 15:48:37.759435",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "section_break_8jjvq",
+  "doctype_name",
+  "recipient_type",
+  "channel_category",
+  "disabled",
+  "column_break_16lop",
+  "doctype_event",
+  "send_to",
+  "section_break_w5uno",
+  "condition",
+  "section_break_6umpe",
+  "message"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "unique": 1
+  },
+  {
+   "fieldname": "section_break_8jjvq",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_6umpe",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Long Text",
+   "label": "Message"
+  },
+  {
+   "fieldname": "send_to",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "Send To",
+   "reqd": 1
+  },
+  {
+   "fieldname": "doctype_name",
+   "fieldtype": "Link",
+   "label": "DocType Name",
+   "mandatory_depends_on": "eval:doc.recipient_type===\"Receiver By Document Field\"",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "doctype_event",
+   "fieldtype": "Select",
+   "label": "Doctype Event",
+   "mandatory_depends_on": "eval:doc.recipient_type===\"Receiver By Document Field\"",
+   "options": "\nBefore Insert\nBefore Validate\nBefore Save\nAfter Insert\nOn Update\nBefore Submit\nAfter Submit\nBefore Cancel\nAfter Cancel\nBefore Delete\nAfter Delete"
+  },
+  {
+   "fieldname": "recipient_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Recipient type",
+   "options": "\nReceiver By Document Field\nChannel",
+   "reqd": 1
+  },
+  {
+   "fieldname": "condition",
+   "fieldtype": "Code",
+   "label": "Condition"
+  },
+  {
+   "fieldname": "column_break_16lop",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_w5uno",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "depends_on": "eval:doc.recipient_type == 'Channel'",
+   "fieldname": "channel_category",
+   "fieldtype": "Select",
+   "label": "Channel Category ",
+   "mandatory_depends_on": "eval:doc.recipient_type == 'Channel'",
+   "options": "Designation\nDepartment"
+  }
+ ],
+ "hide_toolbar": 1,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-08-18 12:27:37.528458",
+ "modified_by": "Administrator",
+ "module": "Notification",
+ "name": "Push Notification",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
