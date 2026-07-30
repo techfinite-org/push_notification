@@ -9,6 +9,7 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
+  "fcm_settings",
   "section_break_8jjvq",
   "doctype_name",
   "recipient_type",
@@ -28,6 +29,15 @@
    "fieldtype": "Data",
    "label": "Title",
    "unique": 1
+  },
+  {
+   "fieldname": "fcm_settings",
+   "fieldtype": "Link",
+   "options": "FCM Settings",
+   "label": "FCM Settings (App)",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Which Firebase project / mobile app to send through"
   },
   {
    "fieldname": "section_break_8jjvq",

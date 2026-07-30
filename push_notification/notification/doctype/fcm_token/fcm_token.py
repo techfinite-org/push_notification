@@ -25,17 +25,23 @@ class FCMToken(Document):
     def autoname(self):
         try:
             user = self.get_user_id()
-            self.name = f"{user}-{self.device}"
             self.user = user
+            # Include fcm_settings so the same user+device can have tokens
+            # for multiple apps (Firebase projects) without collision
+            self.name = f"{user}-{self.device}-{self.fcm_settings}"
         except Exception as e:
             frappe.log_error(title="FCM Token", message=str(e))
 
     def on_update(self):
-        device = frappe.db.sql(
-            f"SELECT device FROM `tabFCM Token` WHERE name = '{self.name}'",
-            as_dict=True
+        existing = frappe.db.sql(
+            "SELECT device, fcm_settings FROM `tabFCM Token` WHERE name = %s",
+            self.name,
+            as_dict=True,
         )
-        if device:
-            device = device[0].get("device")
-            if device and device != self.device:
-                self.rename(name=f"{self.user}-{self.device}", force=True)
+        if existing:
+            row = existing[0]
+            if row.get("device") != self.device or row.get("fcm_settings") != self.fcm_settings:
+                self.rename(
+                    name=f"{self.user}-{self.device}-{self.fcm_settings}",
+                    force=True,
+                )

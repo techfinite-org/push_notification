@@ -8,6 +8,7 @@
  "engine": "InnoDB",
  "field_order": [
   "user",
+  "fcm_settings",
   "device",
   "token",
   "active"
@@ -19,6 +20,15 @@
    "in_list_view": 1,
    "label": "User",
    "reqd": 1
+  },
+  {
+   "fieldname": "fcm_settings",
+   "fieldtype": "Link",
+   "options": "FCM Settings",
+   "in_list_view": 1,
+   "label": "FCM Settings (App)",
+   "reqd": 1,
+   "description": "Which Firebase project / mobile app this token belongs to"
   },
   {
    "fieldname": "device",
@@ -44,7 +54,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-03 15:33:09.447993",
+ "modified": "2026-07-30 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Notification",
  "name": "FCM Token",

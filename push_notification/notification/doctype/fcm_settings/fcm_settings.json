@@ -1,12 +1,14 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:app_name",
  "creation": "2025-05-30 12:55:49.493800",
  "default_view": "List",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "app_name",
   "enabled",
   "fcm_token_path",
   "send_push_notification_with_system_notification",
@@ -20,7 +22,16 @@
  ],
  "fields": [
   {
-   "description": "Full path ie./home/frappe/frappe-bench/sites/hrms/fcm_token.json",
+   "fieldname": "app_name",
+   "fieldtype": "Data",
+   "label": "App Name",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "description": "Human-readable name for this Firebase project / mobile app (e.g. SleepQure HMS, ClaimGenie)"
+  },
+  {
+   "description": "Full path to the Firebase service account JSON file, e.g. /home/frappe/frappe-bench/sites/mysite/fcm_token.json",
    "fieldname": "fcm_token_path",
    "fieldtype": "Data",
    "label": "FCM Token Path"
@@ -28,16 +39,21 @@
   {
    "fieldname": "fcm_project_name",
    "fieldtype": "Data",
-   "label": "FCM Project Name"
+   "label": "FCM Project Name",
+   "in_list_view": 1
   },
   {
+   "description": "JSON object merged into message.android (e.g. {\"priority\": \"high\"}). Must be a valid JSON object, not the full FCM envelope.",
    "fieldname": "android_custom_payload",
    "fieldtype": "Code",
+   "options": "JSON",
    "label": "Android Custom Payload"
   },
   {
+   "description": "JSON object merged into message.apns (e.g. {\"payload\": {\"aps\": {\"sound\": \"default\"}}}). Must be a valid JSON object, not the full FCM envelope.",
    "fieldname": "ios_custom_payload",
    "fieldtype": "Code",
+   "options": "JSON",
    "label": "IOS Custom Payload"
   },
   {
@@ -64,23 +80,24 @@
    "default": "0",
    "fieldname": "enabled",
    "fieldtype": "Check",
-   "label": "Enabled"
+   "label": "Enabled",
+   "in_list_view": 1
   },
   {
-   "description": "If no site name is given, the default site name will be used",
+   "description": "Used in FCM topic names. Only letters, numbers, hyphens, underscores, dots allowed.",
    "fieldname": "site",
    "fieldtype": "Data",
    "label": "Site",
-   "mandatory_depends_on": "eval:doc.enabled ==1"
+   "mandatory_depends_on": "eval:doc.enabled == 1"
   }
  ],
  "index_web_pages_for_search": 1,
- "issingle": 1,
  "links": [],
- "modified": "2025-08-18 19:45:39.071476",
+ "modified": "2026-07-30 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Notification",
  "name": "FCM Settings",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

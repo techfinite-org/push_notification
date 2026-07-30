@@ -8,6 +8,14 @@ from .sender import Sender
 
 class PushNotification(Document):
 
+    def on_update(self):
+        from .event_handler import invalidate_rule_cache
+        invalidate_rule_cache(self, "on_update")
+
+    def on_trash(self):
+        from .event_handler import invalidate_rule_cache
+        invalidate_rule_cache(self, "on_trash")
+
     def validate_condition(self) -> bool:
         if not self.condition:
             return True
@@ -55,7 +63,7 @@ class PushNotification(Document):
             return
 
         from_user = self.event_doc.modified_by if self.event_doc else frappe.session.user
-        status = status or "Sent Vai Push Notification"
+        status = status or "Sent Via Push Notification"
         for user in users:
             frappe.get_doc({
                 "doctype": "Notification Log",
@@ -65,6 +73,7 @@ class PushNotification(Document):
                 "for_user": user,
                 "from_user": from_user,
                 "custom_push_notification_status": status,
+                "custom_fcm_settings": self.fcm_settings,
             }).insert(ignore_permissions=True)
 
     def _send(self) -> None:
@@ -76,7 +85,8 @@ class PushNotification(Document):
             self.create_log()
         else:
             try:
-                Sender(self, self.send_to, self.title, self.message, 1).send()
+                Sender(self, self.send_to, self.title, self.message, 1,
+                       settings_name=self.fcm_settings).send()
                 self.create_log(status="Sent")
             except Exception as e:
                 self.create_log(status="Error")
@@ -90,11 +100,19 @@ class PushNotification(Document):
 
 
 @frappe.whitelist()
-def trigger_notification(notification_doc_name, event_doc=None):
+def trigger_notification(notification_doc_name, event_doctype=None, event_doc_name=None):
+    """
+    Reload the event doc inside the worker from doctype+name
+    instead of unpickling a stale Document object from Redis.
+    """
     try:
         doc = frappe.get_doc("Push Notification", notification_doc_name)
-        if not doc.disabled:
-            doc.send(event_doc)
+        if doc.disabled:
+            return
+        event_doc = None
+        if event_doctype and event_doc_name:
+            event_doc = frappe.get_doc(event_doctype, event_doc_name)
+        doc.send(event_doc)
     except Exception as e:
         frappe.log_error(
             title="Push Notification Trigger Error",
@@ -103,14 +121,15 @@ def trigger_notification(notification_doc_name, event_doc=None):
 
 
 @frappe.whitelist()
-def enqueue_notification(notification_doc_name, event_doc=None):
+def enqueue_notification(notification_doc_name, event_doctype=None, event_doc_name=None):
     try:
         frappe.enqueue(
             method="push_notification.notification.doctype.push_notification.push_notification.trigger_notification",
             queue="long",
             timeout=3600,
             notification_doc_name=notification_doc_name,
-            event_doc=event_doc,
+            event_doctype=event_doctype,
+            event_doc_name=event_doc_name,
             job_name=f"{notification_doc_name}_{frappe.utils.now()}",
         )
     except Exception as e:

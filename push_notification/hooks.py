@@ -34,5 +34,8 @@ doc_events = {
 }
 
 fixtures = [
-    "Custom Field",
+    {
+        "doctype": "Custom Field",
+        "filters": [["dt", "=", "Notification Log"]]
+    }
 ]
