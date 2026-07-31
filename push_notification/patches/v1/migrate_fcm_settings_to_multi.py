@@ -38,10 +38,21 @@ def execute():
         "ios_custom_payload": old_values.get("ios_custom_payload", ""),
     }).insert(ignore_permissions=True)
 
-    # Point all existing Push Notification records at the migrated record
-    frappe.db.sql(
-        "UPDATE `tabPush Notification` SET fcm_settings = 'Default' WHERE fcm_settings IS NULL OR fcm_settings = ''"
-    )
+    # Point all existing Push Notification records at the migrated record.
+    # Guard: the fcm_settings column is added by schema sync which runs AFTER
+    # patches, so on a fresh install the column may not exist yet — skip safely.
+    col_exists = frappe.db.sql(
+        """
+        SELECT COUNT(*) FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME   = 'tabPush Notification'
+          AND COLUMN_NAME  = 'fcm_settings'
+        """
+    )[0][0]
+    if col_exists:
+        frappe.db.sql(
+            "UPDATE `tabPush Notification` SET fcm_settings = 'Default' WHERE fcm_settings IS NULL OR fcm_settings = ''"
+        )
 
     # Clean up old single-doc rows
     frappe.db.sql("DELETE FROM `tabSingles` WHERE doctype = 'FCM Settings'")

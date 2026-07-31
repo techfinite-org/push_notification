@@ -23,6 +23,8 @@ def trigger_notification(doc_name):
         sender = Sender(
             doc, doc.for_user, doc.subject, doc.email_content,
             channel=0, settings_name=doc.custom_fcm_settings or None,
+            route_doctype=doc.document_type or "",
+            route_document=doc.document_name or "",
         )
         sender.send()
         if sender.skipped_no_device:

@@ -40,7 +40,7 @@ def _parse_custom_payload(raw, field_name: str) -> dict:
 
 class Sender:
     def __init__(self, doc, send_to, title, message, channel=0, message_type="notification",
-                 data_message="", settings_name=None):
+                 data_message="", settings_name=None, route_doctype="", route_document=""):
         self.doc = doc
         self.title = title
         self.message = message
@@ -50,6 +50,9 @@ class Sender:
         self.message_type = message_type
         self.data_message = data_message
         self.settings_name = settings_name
+        # Deep-link routing: mobile app reads these from the FCM data block on tap
+        self.route_doctype = route_doctype or ""
+        self.route_document = route_document or ""
         self.tokens = []
         self.raise_exception = False
         self.skipped_no_device = False  # True when user has no active FCM tokens
@@ -111,6 +114,15 @@ class Sender:
 
         return android, apns
 
+    def build_route_data(self) -> dict:
+        """FCM data payload for deep-linking. All values MUST be strings."""
+        data = {}
+        if self.route_doctype:
+            data["document_type"] = str(self.route_doctype)
+        if self.route_document:
+            data["document_name"] = str(self.route_document)
+        return data
+
     def prepare_message(self):
         android, apns = self.build_payload()
         base_message = {
@@ -121,6 +133,11 @@ class Sender:
             base_message["data"] = self.data_message
         else:
             base_message["notification"] = self.render_notification()
+            # Attach routing keys alongside the notification so taps deep-link.
+            # FCM allows notification + data in the same message.
+            route_data = self.build_route_data()
+            if route_data:
+                base_message["data"] = route_data
 
         if self.channel:
             if self.send_to == "All Users":

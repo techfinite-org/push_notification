@@ -106,7 +106,7 @@
    "fieldtype": "Select",
    "label": "Channel Category ",
    "mandatory_depends_on": "eval:doc.recipient_type == 'Channel'",
-   "options": "Designation\nDepartment"
+   "options": "Designation\nDepartment\nRole"
   }
  ],
  "hide_toolbar": 1,

@@ -43,12 +43,19 @@ class PushNotification(Document):
 
         if self.send_to != "All Users":
             if self.recipient_type == "Channel":
-                base_query += " JOIN `tabEmployee` te ON te.user_id = ts.name"
-                filter_field = "te.designation" if self.channel_category == "Designation" else "te.department"
-                filters.extend([
-                    f"{filter_field} = {frappe.db.escape(self.send_to)}",
-                    "te.status = 'Active'",
-                ])
+                if self.channel_category == "Role":
+                    # Generic, app-agnostic grouping — works on any Frappe product
+                    # (HMS/ERP/HRMS) since every user has roles via tabHas Role.
+                    base_query += " JOIN `tabHas Role` hr ON hr.parent = ts.name AND hr.parenttype = 'User'"
+                    filters.append(f"hr.role = {frappe.db.escape(self.send_to)}")
+                else:
+                    # HR-specific grouping (requires Employee records)
+                    base_query += " JOIN `tabEmployee` te ON te.user_id = ts.name"
+                    filter_field = "te.designation" if self.channel_category == "Designation" else "te.department"
+                    filters.extend([
+                        f"{filter_field} = {frappe.db.escape(self.send_to)}",
+                        "te.status = 'Active'",
+                    ])
             else:
                 filters.append(f"ts.email = {frappe.db.escape(self.send_to)}")
 
@@ -64,6 +71,10 @@ class PushNotification(Document):
 
         from_user = self.event_doc.modified_by if self.event_doc else frappe.session.user
         status = status or "Sent Via Push Notification"
+        # Deep-link routing: carry the triggering document so the mobile app can
+        # navigate on tap. Empty when triggered manually (no event doc).
+        route_doctype = self.event_doc.doctype if self.event_doc else ""
+        route_document = self.event_doc.name if self.event_doc else ""
         for user in users:
             frappe.get_doc({
                 "doctype": "Notification Log",
@@ -74,6 +85,8 @@ class PushNotification(Document):
                 "from_user": from_user,
                 "custom_push_notification_status": status,
                 "custom_fcm_settings": self.fcm_settings,
+                "document_type": route_doctype,
+                "document_name": route_document,
             }).insert(ignore_permissions=True)
 
     def _send(self) -> None:
@@ -86,7 +99,9 @@ class PushNotification(Document):
         else:
             try:
                 Sender(self, self.send_to, self.title, self.message, 1,
-                       settings_name=self.fcm_settings).send()
+                       settings_name=self.fcm_settings,
+                       route_doctype=self.event_doc.doctype if self.event_doc else "",
+                       route_document=self.event_doc.name if self.event_doc else "").send()
                 self.create_log(status="Sent")
             except Exception as e:
                 self.create_log(status="Error")
