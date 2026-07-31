@@ -30,12 +30,35 @@ class PushNotification(Document):
             return ""
         return frappe.render_template(text, {"doc": self.event_doc}) if self.event_doc else text
 
+    def _resolve_path(self, path: str):
+        """
+        Resolve a dotted field path against the event doc, hopping through Link
+        fields. E.g. 'patient.user_id' loads the linked Patient and returns its
+        user_id. A plain 'owner' or 'user' still works (single segment, no hop).
+        Returns None if any hop is missing or the field has no value.
+        """
+        if not path or not self.event_doc:
+            return None
+        doc = self.event_doc
+        parts = path.split(".")
+        for i, part in enumerate(parts):
+            if doc is None:
+                return None
+            value = doc.get(part)
+            if i == len(parts) - 1:
+                return value
+            df = doc.meta.get_field(part)
+            if not df or not df.options or not value:
+                return None
+            doc = frappe.get_doc(df.options, value)
+        return None
+
     def render_message(self) -> None:
         self.title = self._render(self.title)
         self.message = self._render(self.message)
 
         if self.recipient_type == "Receiver By Document Field":
-            self.send_to = getattr(self.event_doc, self.send_to, None)
+            self.send_to = self._resolve_path(self.send_to)
 
     def get_user_list(self) -> list[str] | bool:
         base_query = "SELECT ts.name FROM tabUser ts"
@@ -153,8 +176,28 @@ def enqueue_notification(notification_doc_name, event_doctype=None, event_doc_na
 
 @frappe.whitelist()
 def get_doctype_fields(doctype_name):
+    """
+    Return selectable recipient paths for a doctype:
+      - all top-level fields (e.g. 'owner', 'user')
+      - one-level Link hops (e.g. 'patient.user_id') so notifications can target
+        the user behind a linked record when the doctype has no direct user field.
+    """
     try:
         meta = frappe.get_meta(doctype_name)
-        return [df.fieldname for df in meta.fields if df.fieldname]
+        fields = []
+        for df in meta.fields:
+            if not df.fieldname:
+                continue
+            fields.append(df.fieldname)
+            # Expand one level through Link fields
+            if df.fieldtype == "Link" and df.options:
+                try:
+                    linked_meta = frappe.get_meta(df.options)
+                except Exception:
+                    continue
+                for ldf in linked_meta.fields:
+                    if ldf.fieldname and ldf.fieldtype in ("Link", "Data"):
+                        fields.append(f"{df.fieldname}.{ldf.fieldname}")
+        return fields
     except Exception as e:
         frappe.throw(f"Error fetching fields: {str(e)}")
