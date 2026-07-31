@@ -30,61 +30,169 @@ class PushNotification(Document):
             return ""
         return frappe.render_template(text, {"doc": self.event_doc}) if self.event_doc else text
 
-    def _resolve_path(self, path: str):
+    def _resolve_recipient(self, field_path: str):
         """
-        Resolve a dotted field path against the event doc, hopping through Link
-        fields. E.g. 'patient.user_id' loads the linked Patient and returns its
-        user_id. A plain 'owner' or 'user' still works (single segment, no hop).
-        Returns None if any hop is missing or the field has no value.
+        Resolve a recipient from the event document.
+
+        Examples:
+            owner
+                -> returns event document owner
+
+            patient
+                -> detects Link field
+                -> gets target DocType from df.options
+                -> loads linked Patient
+                -> returns its user_id
+
+            patient.user_id
+                -> explicitly traverses Patient and returns user_id
         """
-        if not path or not self.event_doc:
+        if not field_path or not self.event_doc:
             return None
-        doc = self.event_doc
-        parts = path.split(".")
-        for i, part in enumerate(parts):
-            if doc is None:
+
+        parts = field_path.split(".")
+        current_doc = self.event_doc
+
+        for index, fieldname in enumerate(parts):
+            value = current_doc.get(fieldname)
+
+            if not value:
                 return None
-            value = doc.get(part)
-            if i == len(parts) - 1:
-                return value
-            df = doc.meta.get_field(part)
-            if not df or not df.options or not value:
+
+            df = current_doc.meta.get_field(fieldname)
+            is_last = index == len(parts) - 1
+
+            # Last segment: return the value directly unless it links to another
+            # non-User doctype we still need to resolve a user from.
+            if is_last:
+                # Plain value (owner, modified_by, a Data field holding an email),
+                # OR a Link that already points at User (e.g. patient.user_id) —
+                # in both cases `value` IS the user, so return it as-is.
+                if not df or df.fieldtype != "Link" or df.options == "User":
+                    return value
+
+                # Link to a non-User doctype (e.g. send_to == "patient"):
+                # load it and dig out its associated Frappe User.
+                linked_doc = frappe.get_doc(df.options, value)
+                return self._get_linked_user(linked_doc)
+
+            # Intermediate segment: must be a Link so we can keep hopping.
+            if not df or df.fieldtype != "Link" or not df.options:
                 return None
-            doc = frappe.get_doc(df.options, value)
+
+            current_doc = frappe.get_doc(df.options, value)
+
         return None
+
+    def _get_linked_user(self, linked_doc):
+        """
+        Find the Frappe User associated with a linked document.
+        """
+
+        # Standard user-link fields used by Patient, Employee and similar doctypes.
+        for fieldname in ("user_id", "user"):
+            df = linked_doc.meta.get_field(fieldname)
+
+            if not df:
+                continue
+
+            user = linked_doc.get(fieldname)
+
+            if user and frappe.db.exists("User", user):
+                return user
+
+        # Optional fallback for doctypes that store only an email address.
+        for fieldname in ("email", "email_id", "personal_email"):
+            df = linked_doc.meta.get_field(fieldname)
+
+            if not df:
+                continue
+
+            email = linked_doc.get(fieldname)
+
+            if not email:
+                continue
+
+            user = frappe.db.get_value(
+                "User",
+                {
+                    "email": email,
+                    "enabled": 1,
+                },
+                "name",
+            )
+
+            if user:
+                return user
+
+        return None
+
 
     def render_message(self) -> None:
         self.title = self._render(self.title)
         self.message = self._render(self.message)
 
+        self.resolved_send_to = self.send_to
+
         if self.recipient_type == "Receiver By Document Field":
-            self.send_to = self._resolve_path(self.send_to)
+            self.resolved_send_to = self._resolve_recipient(self.send_to)
 
     def get_user_list(self) -> list[str] | bool:
-        base_query = "SELECT ts.name FROM tabUser ts"
+        recipient = getattr(
+            self,
+            "resolved_send_to",
+            self.send_to,
+        )
+
+        base_query = "SELECT DISTINCT ts.name FROM `tabUser` ts"
         filters = ["ts.enabled = 1"]
+        values = {}
 
         if self.send_to != "All Users":
             if self.recipient_type == "Channel":
                 if self.channel_category == "Role":
-                    # Generic, app-agnostic grouping — works on any Frappe product
-                    # (HMS/ERP/HRMS) since every user has roles via tabHas Role.
-                    base_query += " JOIN `tabHas Role` hr ON hr.parent = ts.name AND hr.parenttype = 'User'"
-                    filters.append(f"hr.role = {frappe.db.escape(self.send_to)}")
+                    base_query += """
+                        INNER JOIN `tabHas Role` hr
+                            ON hr.parent = ts.name
+                           AND hr.parenttype = 'User'
+                    """
+                    filters.append("hr.role = %(channel)s")
+                    values["channel"] = self.send_to
                 else:
-                    # HR-specific grouping (requires Employee records)
-                    base_query += " JOIN `tabEmployee` te ON te.user_id = ts.name"
-                    filter_field = "te.designation" if self.channel_category == "Designation" else "te.department"
+                    base_query += """
+                        INNER JOIN `tabEmployee` te
+                            ON te.user_id = ts.name
+                    """
+
+                    filter_field = (
+                        "designation"
+                        if self.channel_category == "Designation"
+                        else "department"
+                    )
+
                     filters.extend([
-                        f"{filter_field} = {frappe.db.escape(self.send_to)}",
+                        f"te.`{filter_field}` = %(channel)s",
                         "te.status = 'Active'",
                     ])
+                    values["channel"] = self.send_to
             else:
-                filters.append(f"ts.email = {frappe.db.escape(self.send_to)}")
+                if not recipient:
+                    return False
+
+                filters.append(
+                    "(ts.name = %(recipient)s OR ts.email = %(recipient)s)"
+                )
+                values["recipient"] = recipient
 
         query = f"{base_query} WHERE {' AND '.join(filters)}"
-        users = frappe.db.sql(query, pluck="name")
-        return users if users else False
+
+        users = frappe.db.sql(
+            query,
+            values=values,
+            pluck=True,
+        )
+
+        return users or False
 
     def create_log(self, status: str = "") -> None:
         users = self.get_user_list()
