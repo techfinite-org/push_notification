@@ -1,1 +1,7 @@
+[pre_model_sync]
+
+
+
+
+[post_model_sync]
 push_notification.patches.v1.migrate_fcm_settings_to_multi
