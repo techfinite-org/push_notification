@@ -37,5 +37,9 @@ fixtures = [
     {
         "doctype": "Custom Field",
         "filters": [["dt", "=", "Notification Log"]]
-    }
+    },
+    # FCM Settings first - Push Notification.fcm_settings links to it, and
+    # fixtures are imported in the order they are listed here.
+    {"doctype": "FCM Settings"},
+    {"doctype": "Push Notification"},
 ]
