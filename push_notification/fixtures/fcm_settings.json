@@ -6,13 +6,13 @@
   "doctype": "FCM Settings",
   "enabled": 1,
   "fcm_project_name": "sleepqure-hms",
-  "fcm_token_path": "/home/frappe/frappe-bench/sites/sleepqure.local/push_notification_auth.json",
+  "fcm_token_path": "/home/frappe/frappe-bench/sites/sleepqure.localhost/push_notification_auth.json",
   "ios_custom_payload": null,
   "modified": "2026-07-31 14:28:19.908086",
   "name": "Client",
   "sanitize_html": 1,
   "send_push_notification_with_system_notification": 1,
-  "site": "sleepqure.local"
+  "site": "sleepqure.localhost"
  },
  {
   "android_custom_payload": null,
@@ -21,13 +21,13 @@
   "doctype": "FCM Settings",
   "enabled": 1,
   "fcm_project_name": "sleepqure-hms",
-  "fcm_token_path": "/home/frappe/frappe-bench/sites/sleepqure.local/push_notification_auth.json",
+  "fcm_token_path": "/home/frappe/frappe-bench/sites/sleepqure.localhost/push_notification_auth.json",
   "ios_custom_payload": null,
   "modified": "2026-07-31 14:28:32.398394",
   "name": "Default",
   "sanitize_html": 1,
   "send_push_notification_with_system_notification": 1,
-  "site": "sleepqure.local"
+  "site": "sleepqure.localhost"
  },
  {
   "android_custom_payload": null,
@@ -36,12 +36,12 @@
   "doctype": "FCM Settings",
   "enabled": 1,
   "fcm_project_name": "sleepqure-hms",
-  "fcm_token_path": "/home/frappe/frappe-bench/sites/sleepqure.local/push_notification_auth.json",
+  "fcm_token_path": "/home/frappe/frappe-bench/sites/sleepqure.localhost/push_notification_auth.json",
   "ios_custom_payload": null,
   "modified": "2026-07-31 20:00:39.254672",
   "name": "CRM",
   "sanitize_html": 1,
   "send_push_notification_with_system_notification": 1,
-  "site": "sleepqure.local"
+  "site": "sleepqure.localhost"
  }
 ]
