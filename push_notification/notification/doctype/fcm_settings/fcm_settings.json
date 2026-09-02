@@ -31,7 +31,7 @@
    "description": "Human-readable name for this Firebase project / mobile app (e.g. SleepQure HMS, ClaimGenie)"
   },
   {
-   "description": "Full path to the Firebase service account JSON file, e.g. /home/frappe/frappe-bench/sites/mysite/fcm_token.json",
+   "description": "Filename of the Firebase service account JSON file, relative to the site folder (e.g. push_notification_auth.json). The site path is resolved automatically.",
    "fieldname": "fcm_token_path",
    "fieldtype": "Data",
    "label": "FCM Token Path"
