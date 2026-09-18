@@ -65,6 +65,15 @@ def validate(doc, method):
         return False
 
     _method = method.lower().replace("_", " ")
+
+    # Frappe fires on_submit/on_cancel hooks but the UI option labels them
+    # "After Submit" / "After Cancel" — translate so the lookup matches.
+    _HOOK_ALIAS = {
+        "on submit": "after submit",
+        "on cancel": "after cancel",
+    }
+    _method = _HOOK_ALIAS.get(_method, _method)
+
     rule_map = _get_rule_map()
     return rule_map.get((doc.doctype, _method)) or False
 
@@ -75,8 +84,14 @@ def handle_event(doc, method):
         notification_names = validate(doc, method)
         if not notification_names:
             return False
+        # Capture the before-save snapshot while it still exists on the live doc.
+        # The background worker reloads the doc fresh (no _doc_before_save), so
+        # has_value_changed() would always return True without this.
+        before_doc = doc.get_doc_before_save()
+        before_save_data = before_doc.as_dict() if before_doc else None
+
         for notification_name in notification_names:
-            enqueue_notification(notification_name, doc.doctype, doc.name)
+            enqueue_notification(notification_name, doc.doctype, doc.name, before_save_data=before_save_data)
     except Exception as e:
         # Use file logger — never frappe.log_error() here, that inserts
         # an Error Log doc which re-triggers this hook → infinite recursion.

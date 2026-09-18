@@ -71,7 +71,7 @@
    "fieldtype": "Select",
    "label": "Doctype Event",
    "mandatory_depends_on": "eval:doc.recipient_type===\"Receiver By Document Field\"",
-   "options": "\nBefore Insert\nBefore Validate\nBefore Save\nAfter Insert\nOn Update\nBefore Submit\nAfter Submit\nBefore Cancel\nAfter Cancel\nBefore Delete\nAfter Delete"
+   "options": "\nBefore Insert\nBefore Validate\nBefore Save\nAfter Insert\nOn Update\nBefore Submit\nAfter Submit\nBefore Cancel\nAfter Cancel\nBefore Update After Submit\nBefore Delete\nAfter Delete"
   },
   {
    "fieldname": "recipient_type",

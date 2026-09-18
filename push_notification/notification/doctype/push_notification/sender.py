@@ -78,8 +78,9 @@ class Sender:
         return [frappe.get_doc("FCM Token", name).get_password("token") for name in token_names]
 
     def get_access_token(self):
+        token_path = frappe.get_site_path(self.settings.fcm_token_path)
         creds = service_account.Credentials.from_service_account_file(
-            self.settings.fcm_token_path,
+            token_path,
             scopes=["https://www.googleapis.com/auth/firebase.messaging"]
         )
         creds.refresh(Request())

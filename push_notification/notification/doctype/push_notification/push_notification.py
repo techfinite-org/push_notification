@@ -20,7 +20,15 @@ class PushNotification(Document):
         if not self.condition:
             return True
         try:
-            return frappe.safe_eval(self.condition, None, {"doc": self.event_doc})
+            # Inject the same whitelisted frappe namespace that Frappe's own
+            # Notification doctype exposes — enables frappe.get_doc(),
+            # frappe.db.get_value(), frappe.db.exists(), etc. in conditions.
+            from frappe.utils.safe_exec import get_safe_globals
+            context = {
+                "doc": self.event_doc,
+                "frappe": get_safe_globals().get("frappe"),
+            }
+            return frappe.safe_eval(self.condition, None, context)
         except Exception as e:
             frappe.log_error(frappe.get_traceback(), "Invalid Push Notification Condition")
             raise ValueError(f"Invalid condition: '{self.condition}' - {e}")
@@ -46,6 +54,11 @@ class PushNotification(Document):
 
             patient.user_id
                 -> explicitly traverses Patient and returns user_id
+
+            party (Dynamic Link, e.g. Subscription.party)
+                -> resolves target doctype at runtime from the field named in
+                   df.options (e.g. "party_type"), then loads and resolves same
+                   as a regular Link
         """
         if not field_path or not self.event_doc:
             return None
@@ -62,25 +75,45 @@ class PushNotification(Document):
             df = current_doc.meta.get_field(fieldname)
             is_last = index == len(parts) - 1
 
-            # Last segment: return the value directly unless it links to another
-            # non-User doctype we still need to resolve a user from.
             if is_last:
-                # Plain value (owner, modified_by, a Data field holding an email),
-                # OR a Link that already points at User (e.g. patient.user_id) —
-                # in both cases `value` IS the user, so return it as-is.
-                if not df or df.fieldtype != "Link" or df.options == "User":
+                if not df:
                     return value
 
-                # Link to a non-User doctype (e.g. send_to == "patient"):
-                # load it and dig out its associated Frappe User.
-                linked_doc = frappe.get_doc(df.options, value)
-                return self._get_linked_user(linked_doc)
+                if df.fieldtype == "Link":
+                    if df.options == "User":
+                        return value
+                    linked_doc = frappe.get_doc(df.options, value)
+                    return self._get_linked_user(linked_doc)
 
-            # Intermediate segment: must be a Link so we can keep hopping.
-            if not df or df.fieldtype != "Link" or not df.options:
+                if df.fieldtype == "Dynamic Link":
+                    target_doctype = current_doc.get(df.options)
+                    if not target_doctype:
+                        return None
+                    if target_doctype == "User":
+                        return value
+                    linked_doc = frappe.get_doc(target_doctype, value)
+                    return self._get_linked_user(linked_doc)
+
+                return value
+
+            # Intermediate segment: must be a Link or Dynamic Link to keep hopping.
+            if not df:
                 return None
 
-            current_doc = frappe.get_doc(df.options, value)
+            if df.fieldtype == "Link":
+                if not df.options:
+                    return None
+                current_doc = frappe.get_doc(df.options, value)
+                continue
+
+            if df.fieldtype == "Dynamic Link":
+                target_doctype = current_doc.get(df.options)
+                if not target_doctype:
+                    return None
+                current_doc = frappe.get_doc(target_doctype, value)
+                continue
+
+            return None
 
         return None
 
@@ -246,7 +279,7 @@ class PushNotification(Document):
 
 
 @frappe.whitelist()
-def trigger_notification(notification_doc_name, event_doctype=None, event_doc_name=None):
+def trigger_notification(notification_doc_name, event_doctype=None, event_doc_name=None, before_save_data=None):
     """
     Reload the event doc inside the worker from doctype+name
     instead of unpickling a stale Document object from Redis.
@@ -258,6 +291,10 @@ def trigger_notification(notification_doc_name, event_doctype=None, event_doc_na
         event_doc = None
         if event_doctype and event_doc_name:
             event_doc = frappe.get_doc(event_doctype, event_doc_name)
+            # Reattach the before-save snapshot captured at hook time so that
+            # has_value_changed() in conditions returns the correct result.
+            if before_save_data and event_doc:
+                event_doc._doc_before_save = frappe.get_doc(before_save_data)
         doc.send(event_doc)
     except Exception as e:
         frappe.log_error(
@@ -267,7 +304,7 @@ def trigger_notification(notification_doc_name, event_doctype=None, event_doc_na
 
 
 @frappe.whitelist()
-def enqueue_notification(notification_doc_name, event_doctype=None, event_doc_name=None):
+def enqueue_notification(notification_doc_name, event_doctype=None, event_doc_name=None, before_save_data=None):
     try:
         frappe.enqueue(
             method="push_notification.notification.doctype.push_notification.push_notification.trigger_notification",
@@ -276,6 +313,7 @@ def enqueue_notification(notification_doc_name, event_doctype=None, event_doc_na
             notification_doc_name=notification_doc_name,
             event_doctype=event_doctype,
             event_doc_name=event_doc_name,
+            before_save_data=before_save_data,
             job_name=f"{notification_doc_name}_{frappe.utils.now()}",
         )
     except Exception as e:
