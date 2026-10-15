@@ -310,6 +310,7 @@ def enqueue_notification(notification_doc_name, event_doctype=None, event_doc_na
             method="push_notification.notification.doctype.push_notification.push_notification.trigger_notification",
             queue="long",
             timeout=3600,
+            enqueue_after_commit=True,
             notification_doc_name=notification_doc_name,
             event_doctype=event_doctype,
             event_doc_name=event_doc_name,
