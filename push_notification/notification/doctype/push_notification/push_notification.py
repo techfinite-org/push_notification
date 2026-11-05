@@ -295,7 +295,10 @@ def trigger_notification(notification_doc_name, event_doctype=None, event_doc_na
             # has_value_changed() in conditions returns the correct result.
             if before_save_data and event_doc:
                 event_doc._doc_before_save = frappe.get_doc(before_save_data)
-        doc.send(event_doc)
+        doc.event_doc = event_doc
+        if doc.validate_condition():
+            doc.render_message()
+            doc._send()
     except Exception as e:
         frappe.log_error(
             title="Push Notification Trigger Error",
@@ -308,8 +311,8 @@ def enqueue_notification(notification_doc_name, event_doctype=None, event_doc_na
     try:
         frappe.enqueue(
             method="push_notification.notification.doctype.push_notification.push_notification.trigger_notification",
-            queue="long",
-            timeout=3600,
+            queue="short",
+            timeout=30,
             notification_doc_name=notification_doc_name,
             event_doctype=event_doctype,
             event_doc_name=event_doc_name,
