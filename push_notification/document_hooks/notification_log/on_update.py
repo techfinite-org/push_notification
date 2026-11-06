@@ -54,8 +54,8 @@ def send_push_notification(doc, event):
             method="push_notification.document_hooks.notification_log.on_update.trigger_notification",
             doc_name=doc.name,
             job_name=f"{doc.name}-push-notification",
-            timeout=3600,
-            queue="long",
+            timeout=30,
+            queue="short",
         )
     except Exception as e:
         frappe.log_error(
